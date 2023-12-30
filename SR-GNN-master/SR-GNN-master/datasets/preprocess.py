@@ -39,8 +39,8 @@ with open(dataset, "r") as f: # mode='r' : 읽기용으로 파일을 엶
     ctr = 0
     curid = -1
     curdate = None
-    for data in reader: # reader가 딕셔너리 형태이므로 data는 reader에 존재하는 key가 됨; 이 for문 돌리는 이유?
-        sessid = data['session_id'] # 해당 row의 sessionid 값 부여 
+    for data in reader: # reader가 딕셔너리 형태임. for문으로 row를 하나씩 dict형태로 불러옴 
+        sessid = data['session_id'] # 해당 row의 sessionid key에 해당하는 값을 sessid에 부여 
         if curdate and not curid == sessid: # curid랑 세션아이디랑 같지 않고 curdate는 True이면 
             date = ''
             if opt.dataset == 'yoochoose':
@@ -52,16 +52,16 @@ with open(dataset, "r") as f: # mode='r' : 읽기용으로 파일을 엶
         if opt.dataset == 'yoochoose':
             item = data['item_id']
         else:
-            item = data['item_id'], int(data['timeframe'])
+            item = data['item_id'], int(data['timeframe']) # timeframe 아이템 클릭 시간인듯? 
         curdate = ''
         if opt.dataset == 'yoochoose':
             curdate = data['timestamp']
         else:
             curdate = data['eventdate']
 
-        if sessid in sess_clicks:
+        if sessid in sess_clicks:  # sess_clicks에 sessionid가 존재하면 추가를 해주고 
             sess_clicks[sessid] += [item]
-        else:
+        else:  # 존재하지 않으면 새롭게 session id 를 넣어주라는 의미
             sess_clicks[sessid] = [item]
         ctr += 1
     date = ''
@@ -69,45 +69,50 @@ with open(dataset, "r") as f: # mode='r' : 읽기용으로 파일을 엶
         date = time.mktime(time.strptime(curdate[:19], '%Y-%m-%dT%H:%M:%S'))
     else:
         date = time.mktime(time.strptime(curdate, '%Y-%m-%d'))
-        for i in list(sess_clicks):
+        for i in list(sess_clicks):   # sess_clicks는 dict이므로 list()해주면 dict의 key값들 출력. 즉 session id값 출력
             sorted_clicks = sorted(sess_clicks[i], key=operator.itemgetter(1))
-            sess_clicks[i] = [c[0] for c in sorted_clicks]
+            # operator.itemgetter : 다양한 기준으로 정렬하기 위해 사용함. sess_clicks를 정렬하는데, 1번째 key의 value로 정렬한다는 의미 
+            ## 즉 , sesseion id가 같은 아이템들을 아이템 id 기준으로 정렬한다는 의미 
+            sess_clicks[i] = [c[0] for c in sorted_clicks]  # 정렬한 값 순서대로 sess_clicks의 해당 세션id의 value를 리스트 형태로 넣어줌
     sess_date[curid] = date
 print("-- Reading data @ %ss" % datetime.datetime.now())
 
 # Filter out length 1 sessions
 for s in list(sess_clicks):
-    if len(sess_clicks[s]) == 1:
+    if len(sess_clicks[s]) == 1:  # 만약에 한 세션아이디에 클릭한 수가 1개밖에 없으면 해당 세션은 제외
         del sess_clicks[s]
         del sess_date[s]
 
 # Count number of times each item appears
 iid_counts = {}
-for s in sess_clicks:
-    seq = sess_clicks[s]
-    for iid in seq:
-        if iid in iid_counts:
+for s in sess_clicks: # list(sess_clicks)랑 똑같음. sess_clicks의 key가 s로 들어감
+    seq = sess_clicks[s] # session id의 정렬한 아이템 리스트가 seq에 들어감 
+    for iid in seq: # 전체 세션에서 이 아이템의 클릭수를 구하기 위함
+        if iid in iid_counts: # 이 아이템이 iid_counts dict에 존재하면 1을 더해줌
             iid_counts[iid] += 1
-        else:
+        else: # 이 아이템이 iid_counts dict에 존재하지 않으면 1이라는 값을 부여해줌 (처음 집계 된거니까)
             iid_counts[iid] = 1
 
-sorted_counts = sorted(iid_counts.items(), key=operator.itemgetter(1))
+sorted_counts = sorted(iid_counts.items(), key=operator.itemgetter(1)) # 아이템들을 클릭된 횟수 순으로 정렬해줌
 
-length = len(sess_clicks)
-for s in list(sess_clicks):
-    curseq = sess_clicks[s]
-    filseq = list(filter(lambda i: iid_counts[i] >= 5, curseq))
-    if len(filseq) < 2:
+length = len(sess_clicks) # 전체 세션의 개수 
+for s in list(sess_clicks): # s에 세션 아이디 넣어줌 
+    curseq = sess_clicks[s] # s의 아이템들 넣어줌 
+    filseq = list(filter(lambda i: iid_counts[i] >= 5, curseq)) # curseq에 존재하는 아이템들중 클릭이 5번 이상 된 아이템들 필터
+    if len(filseq) < 2: # 다섯번 이상 클릭된 아이템의 개수가 2개 미만이면 해당 세션 제외함
         del sess_clicks[s]
         del sess_date[s]
     else:
-        sess_clicks[s] = filseq
+        sess_clicks[s] = filseq # 클릭이 5번 이상 된 아이템만 필터한것을 다시 해당 세션의 아이템으로 넣어줌 
+
+### 세션 아이디 중 아이템이 1개 이하이면 해당 세션 제외. 아이템이 2개이상이여도 그 아이템들이 전체 세션에서 5번 이상 클릭된 아이템들만 사용함
+#### 만약 5번 이상 클릭된 아이템이 한개뿐이면 그 세션 아이디도 제외됨 
 
 # Split out test set based on dates
-dates = list(sess_date.items())
-maxdate = dates[0][1]
+dates = list(sess_date.items())  # sess_date의 각 key와 value가 튜플 형태로 된 것을 리스트로 만들어줌 즉 [(key1, value1),(key2,value2)] 이런모양 
+maxdate = dates[0][1] # 일단 maxdate에 값 넣어놓음
 
-for _, date in dates:
+for _, date in dates: # maxdate값 구하기위한 for문 
     if maxdate < date:
         maxdate = date
 
@@ -119,10 +124,10 @@ else:
     splitdate = maxdate - 86400 * 7
 
 print('Splitting date', splitdate)      # Yoochoose: ('Split date', 1411930799.0)
-tra_sess = filter(lambda x: x[1] < splitdate, dates)
+tra_sess = filter(lambda x: x[1] < splitdate, dates) # splitdate를 기점으로 앞데이터는 트레이닝, 뒤 데이터는 테스트로 사용
 tes_sess = filter(lambda x: x[1] > splitdate, dates)
 
-# Sort sessions by date
+# Sort sessions by date  트레이닝과 테스트 데이터 각각 날짜 순으로 정렬해줌 
 tra_sess = sorted(tra_sess, key=operator.itemgetter(1))     # [(session_id, timestamp), (), ]
 tes_sess = sorted(tes_sess, key=operator.itemgetter(1))     # [(session_id, timestamp), (), ]
 print(len(tra_sess))    # 186670    # 7966257
@@ -140,16 +145,17 @@ def obtian_tra():
     train_dates = []
     item_ctr = 1
     for s, date in tra_sess:
-        seq = sess_clicks[s]
+        seq = sess_clicks[s]  # 트레이닝 데이터의 세션 아이디에 해당하는 아이템 리스트 
         outseq = []
-        for i in seq:
-            if i in item_dict:
-                outseq += [item_dict[i]]
-            else:
-                outseq += [item_ctr]
-                item_dict[i] = item_ctr
-                item_ctr += 1
-        if len(outseq) < 2:  # Doesn't occur
+        for i in seq: # 아이템 리스트의 해당 아이템이 
+            if i in item_dict: # item_dict에 존재하면 
+                outseq += [item_dict[i]] #outseq에 item_dict의 해당 아이템의 value값 (item+ctr) 넣어줌 
+            else: # 아이템이 item_dict에 존재하지 않으면, 
+                outseq += [item_ctr] # outseq에 item_ctr넣고 
+                item_dict[i] = item_ctr #item_dict에 해당 아이템을 key로, item_ctr을 value로 넣음 
+                item_ctr += 1 # item_ctr에 1을 더해줌
+            # item_ctr은 결국 아이템이 출연(?)하는 순서대로 번호를 매겨준것임. 번호 1번부터. 
+        if len(outseq) < 2:  # Doesn't occur # 아이템이 1개뿐이라는 말이 되므로.. 이런 애들은 미리 제외시켰음 앞전에 
             continue
         train_ids += [s]
         train_dates += [date]
@@ -159,7 +165,7 @@ def obtian_tra():
 
 
 # Convert test sessions to sequences, ignoring items that do not appear in training set
-def obtian_tes():
+def obtian_tes():  # training set처럼 test set도 같은 방식으로 처리해줌. item이 training에는 존재하지 않으면 무시함(해당 아이템 제외)
     test_ids = []
     test_seqs = []
     test_dates = []
