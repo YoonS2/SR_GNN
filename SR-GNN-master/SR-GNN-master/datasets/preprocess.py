@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python36
 # -*- coding: utf-8 -*-
 """
@@ -19,16 +20,18 @@ parser.add_argument('--dataset', default='sample', help='dataset name: diginetic
 opt = parser.parse_args()
 print(opt)
 
-dataset = 'sample_train-item-views.csv'
+# 데이터셋 지정 기본적으로 sample 데이터 사용 
+## 다른 데이터셋 사용하려면 preprocess.py --dataset=diginetica 또는  preprocess.py --dataset=yoochoose 입력
+dataset = 'sample_train-item-views.csv'  
 if opt.dataset == 'diginetica':
     dataset = 'train-item-views.csv'
 elif opt.dataset =='yoochoose':
     dataset = 'yoochoose-clicks.dat'
 
 print("-- Starting @ %ss" % datetime.datetime.now())
-with open(dataset, "r") as f:
-    if opt.dataset == 'yoochoose':
-        reader = csv.DictReader(f, delimiter=',')
+with open(dataset, "r") as f: # mode='r' : 읽기용으로 파일을 엶
+    if opt.dataset == 'yoochoose': # 데이터셋에 따라 구분자 달라짐
+        reader = csv.DictReader(f, delimiter=',')  # csv.DictReader : 파일의 각 row를 딕셔너리 형태로 읽어옴 
     else:
         reader = csv.DictReader(f, delimiter=';')
     sess_clicks = {}
@@ -36,15 +39,15 @@ with open(dataset, "r") as f:
     ctr = 0
     curid = -1
     curdate = None
-    for data in reader:
-        sessid = data['session_id']
-        if curdate and not curid == sessid:
+    for data in reader: # reader가 딕셔너리 형태이므로 data는 reader에 존재하는 key가 됨; 이 for문 돌리는 이유?
+        sessid = data['session_id'] # 해당 row의 sessionid 값 부여 
+        if curdate and not curid == sessid: # curid랑 세션아이디랑 같지 않고 curdate는 True이면 
             date = ''
             if opt.dataset == 'yoochoose':
                 date = time.mktime(time.strptime(curdate[:19], '%Y-%m-%dT%H:%M:%S'))
             else:
                 date = time.mktime(time.strptime(curdate, '%Y-%m-%d'))
-            sess_date[curid] = date
+            sess_date[curid] = date # 세션 데이트 dict형태로 넣어줌
         curid = sessid
         if opt.dataset == 'yoochoose':
             item = data['item_id']

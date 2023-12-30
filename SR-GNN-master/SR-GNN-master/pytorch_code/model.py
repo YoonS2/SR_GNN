@@ -10,13 +10,13 @@ import datetime
 import math
 import numpy as np
 import torch
-from torch import nn
+from torch import nn ## 이함수 역할 확인해보기
 from torch.nn import Module, Parameter
 import torch.nn.functional as F
 
 
 class GNN(Module):
-    def __init__(self, hidden_size, step=1):
+    def __init__(self, hidden_size, step=1): ## GNN 모델위한 초기 설정 함수 
         super(GNN, self).__init__()
         self.step = step
         self.hidden_size = hidden_size

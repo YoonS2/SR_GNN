@@ -6,15 +6,15 @@ Created on July, 2018
 @author: Tangrizzly
 """
 
-import networkx as nx
+import networkx as nx # 네트워크 분석을 위해 많이 쓰이는 패키지 
 import numpy as np
 
 
 def build_graph(train_data):
-    graph = nx.DiGraph()
-    for seq in train_data:
+    graph = nx.DiGraph()  # 링크의 방향성이 존재하는 빈 그래프(네트워크)를 생성함. nx.Graph 는 방향성이 없는 그래프 
+    for seq in train_data: # seq가 session인듯함?
         for i in range(len(seq) - 1):
-            if graph.get_edge_data(seq[i], seq[i + 1]) is None:
+            if graph.get_edge_data(seq[i], seq[i + 1]) is None:  
                 weight = 1
             else:
                 weight = graph.get_edge_data(seq[i], seq[i + 1])['weight'] + 1
