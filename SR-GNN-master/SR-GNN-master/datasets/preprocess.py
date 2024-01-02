@@ -144,12 +144,12 @@ def obtian_tra():
     train_seqs = []
     train_dates = []
     item_ctr = 1
-    for s, date in tra_sess:
+    for s, date in tra_sess: # tra_sess:  [(session_id, timestamp), (), ]
         seq = sess_clicks[s]  # 트레이닝 데이터의 세션 아이디에 해당하는 아이템 리스트 
         outseq = []
         for i in seq: # 아이템 리스트의 해당 아이템이 
             if i in item_dict: # item_dict에 존재하면 
-                outseq += [item_dict[i]] #outseq에 item_dict의 해당 아이템의 value값 (item+ctr) 넣어줌 
+                outseq += [item_dict[i]] #outseq에 item_dict의 해당 아이템의 value값 (item_ctr) 넣어줌 
             else: # 아이템이 item_dict에 존재하지 않으면, 
                 outseq += [item_ctr] # outseq에 item_ctr넣고 
                 item_dict[i] = item_ctr #item_dict에 해당 아이템을 key로, item_ctr을 value로 넣음 
@@ -161,7 +161,7 @@ def obtian_tra():
         train_dates += [date]
         train_seqs += [outseq]
     print(item_ctr)     # 43098, 37484
-    return train_ids, train_dates, train_seqs
+    return train_ids, train_dates, train_seqs  # session id, session_date, 아이템no
 
 
 # Convert test sessions to sequences, ignoring items that do not appear in training set
@@ -180,31 +180,31 @@ def obtian_tes():  # training set처럼 test set도 같은 방식으로 처리�
         test_ids += [s]
         test_dates += [date]
         test_seqs += [outseq]
-    return test_ids, test_dates, test_seqs
+    return test_ids, test_dates, test_seqs # session id, session_date, 아이템no
 
 
 tra_ids, tra_dates, tra_seqs = obtian_tra()
 tes_ids, tes_dates, tes_seqs = obtian_tes()
 
 
-def process_seqs(iseqs, idates):
+def process_seqs(iseqs, idates): # iseqs는 아이템 번호 , idates는 해당 시퀀스의 date값 
     out_seqs = []
     out_dates = []
     labs = []
     ids = []
-    for id, seq, date in zip(range(len(iseqs)), iseqs, idates):
+    for id, seq, date in zip(range(len(iseqs)), iseqs, idates): # iseqs는 시퀀스의 id. 해당 dataset에서 시퀀스에 순서값(id) 부여해줌 
         for i in range(1, len(seq)):
-            tar = seq[-i]
-            labs += [tar]
-            out_seqs += [seq[:-i]]
+            tar = seq[-i] # 시퀀스의 맨마지막, 뒤에서 두번째.. 순으로 target으로 넣음 1~t까지의 시간이 있다면 t, t-1, t-2.. 번째에 해당하는 아이템no가 target이 됨
+            labs += [tar] # 라벨 리스트에 추가 
+            out_seqs += [seq[:-i]] # target을 학습시키기 위해 target 앞까지의 아이템no를 넣어줌 
             out_dates += [date]
             ids += [id]
-    return out_seqs, out_dates, labs, ids
+    return out_seqs, out_dates, labs, ids # 학습데이터, seq날짜, 라벨, 시퀀스id(시퀀스 순서no )
 
 
 tr_seqs, tr_dates, tr_labs, tr_ids = process_seqs(tra_seqs, tra_dates)
 te_seqs, te_dates, te_labs, te_ids = process_seqs(tes_seqs, tes_dates)
-tra = (tr_seqs, tr_labs)
+tra = (tr_seqs, tr_labs) # training의 시퀀스 데이터에서 label앞까지의 데이터/ label 
 tes = (te_seqs, te_labs)
 print(len(tr_seqs))
 print(len(te_seqs))
@@ -212,16 +212,16 @@ print(tr_seqs[:3], tr_dates[:3], tr_labs[:3])
 print(te_seqs[:3], te_dates[:3], te_labs[:3])
 all = 0
 
-for seq in tra_seqs:
-    all += len(seq)
+for seq in tra_seqs: # tra_seqs: 아이템no 
+    all += len(seq) # 전체 시퀀스에 존재하는 아이템 개수 
 for seq in tes_seqs:
-    all += len(seq)
-print('avg length: ', all/(len(tra_seqs) + len(tes_seqs) * 1.0))
+    all += len(seq) # 테스트 셋에 존재하는 아이템개수까지 모두 더해줌 
+print('avg length: ', all/(len(tra_seqs) + len(tes_seqs) * 1.0)) # 시퀀스당 평균 아이템 개수 보여줌 
 if opt.dataset == 'diginetica':
     if not os.path.exists('diginetica'):
         os.makedirs('diginetica')
-    pickle.dump(tra, open('diginetica/train.txt', 'wb'))
-    pickle.dump(tes, open('diginetica/test.txt', 'wb'))
+    pickle.dump(tra, open('diginetica/train.txt', 'wb')) # pickle.dump(객체, 파일) :객체를 파일로 저장
+    pickle.dump(tes, open('diginetica/test.txt', 'wb'))  ## pickle.load(파일)은 파일을 로딩한다는 의미
     pickle.dump(tra_seqs, open('diginetica/all_train_seq.txt', 'wb'))
 elif opt.dataset == 'yoochoose':
     if not os.path.exists('yoochoose1_4'):
@@ -231,7 +231,7 @@ elif opt.dataset == 'yoochoose':
     pickle.dump(tes, open('yoochoose1_4/test.txt', 'wb'))
     pickle.dump(tes, open('yoochoose1_64/test.txt', 'wb'))
 
-    split4, split64 = int(len(tr_seqs) / 4), int(len(tr_seqs) / 64)
+    split4, split64 = int(len(tr_seqs) / 4), int(len(tr_seqs) / 64) # 1/4, 1/64 로 나눠주기 위함 
     print(len(tr_seqs[-split4:]))
     print(len(tr_seqs[-split64:]))
 
